@@ -1,72 +1,42 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
-from django.core.exceptions import ValidationError
-from django.contrib.auth import get_user_model
-
 from .models import CustomUser
 
-class CustomUserRegistrationForm(UserCreationForm):
-    email = forms.EmailField(
-        required=True,
-        widget=forms.EmailInput(attrs={"placeholder": "Enter your email address"}),
-    )
 
+# User Registration Form
+class CustomUserRegistrationForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ["first_name", "last_name", "email", "password1", "password2"]
+        fields = [
+            'email', 'address_line_1', 'address_line_2',
+            'city', 'postcode', 'country', 'mobile', 'profile_picture'
+        ]
 
-    def clean_email(self):
-        email = self.cleaned_data.get("email")
-        if CustomUser.objects.filter(email=email).exists():
-            raise ValidationError("This email is already taken. Please choose another one.")
-        return email
+    # Define additional fields and validation
+    email = forms.EmailField(required=True)
+    address_line_1 = forms.CharField(max_length=255, required=True)
+    address_line_2 = forms.CharField(max_length=255, required=False)
+    city = forms.CharField(max_length=255, required=True)
+    postcode = forms.CharField(max_length=20, required=True)
+    country = forms.CharField(max_length=255, required=True)
+    mobile = forms.CharField(max_length=20, required=True)
+    profile_picture = forms.ImageField(required=False)
 
 
+# User Login Form (Assuming it exists based on your `views.py` code)
 class CustomUserLoginForm(forms.Form):
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={"placeholder": "Enter your email address"})
-    )
-    password = forms.CharField(
-        widget=forms.PasswordInput(attrs={"placeholder": "Enter your password"})
-    )
-
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        User = get_user_model()
-        if not User.objects.filter(email=email).exists():
-            raise forms.ValidationError("No account found with this email address.")
-        return email
+    email = forms.EmailField(required=True)
+    password = forms.CharField(widget=forms.PasswordInput(), required=True)
 
 
-class UserProfileForm(forms.ModelForm):
-    class Meta:
-        model = CustomUser
-        fields = ['first_name', 'last_name', 'email']
-
-    def clean_email(self):
-        email = self.cleaned_data.get("email")
-        if CustomUser.objects.filter(email=email).exclude(id=self.instance.id).exists():
-            raise ValidationError("This email is already taken. Please choose another one.")
-        return email
-
-
+# Password Reset Form (for forgot password page)
 class PasswordResetForm(forms.Form):
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={"placeholder": "Enter your email address"})
-    )
+    email = forms.EmailField(required=True)
 
 
+# Set New Password Form (for password reset confirmation)
 class SetNewPasswordForm(forms.Form):
-    password = forms.CharField(
-        widget=forms.PasswordInput(attrs={"placeholder": "Enter new password"}),
-        min_length=8,
-        required=True,
-    )
-    confirm_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={"placeholder": "Confirm new password"}),
-        min_length=8,
-        required=True,
-    )
+    password = forms.CharField(widget=forms.PasswordInput(), required=True)
+    confirm_password = forms.CharField(widget=forms.PasswordInput(), required=True)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -74,5 +44,23 @@ class SetNewPasswordForm(forms.Form):
         confirm_password = cleaned_data.get("confirm_password")
 
         if password != confirm_password:
-            raise ValidationError("Passwords do not match.")
+            raise forms.ValidationError("Passwords do not match.")
         return cleaned_data
+
+
+# User Profile Update Form (for updating user profile)
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = [
+            'address_line_1', 'address_line_2', 'city', 'postcode', 'country', 'mobile', 'profile_picture'
+        ]
+
+    # Define additional fields and validation for profile updates
+    address_line_1 = forms.CharField(max_length=255, required=True)
+    address_line_2 = forms.CharField(max_length=255, required=False)
+    city = forms.CharField(max_length=255, required=True)
+    postcode = forms.CharField(max_length=20, required=True)
+    country = forms.CharField(max_length=255, required=True)
+    mobile = forms.CharField(max_length=20, required=True)
+    profile_picture = forms.ImageField(required=False)

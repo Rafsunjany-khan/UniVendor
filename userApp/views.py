@@ -4,32 +4,29 @@ from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import redirect, render
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.decorators import login_required
-
-
-from .forms import (
-    CustomUserRegistrationForm,
-    CustomUserLoginForm,
-    UserProfileForm,
-    PasswordResetForm,
-    SetNewPasswordForm,
-)
+from .forms import CustomUserRegistrationForm, CustomUserLoginForm, PasswordResetForm, SetNewPasswordForm, UserProfileForm
 from .models import CustomUser
 from .utils import send_password_reset_email, send_verification_email
 
 
+# User Signup View
 def user_signup(request):
     if request.method == "POST":
-        form = CustomUserRegistrationForm(request.POST)
+        form = CustomUserRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
-            send_verification_email(request, user)
+            send_verification_email(request, user)  # Send verification email
             messages.info(request, "We have sent you a verification email.")
             return redirect("login")
+        else:
+            messages.error(request, "Please fix the errors below.")
     else:
         form = CustomUserRegistrationForm()
+
     return render(request, "signup.html", {"form": form})
 
 
+# User Login View
 def user_login(request):
     if request.method == "POST":
         form = CustomUserLoginForm(request.POST)
@@ -44,23 +41,27 @@ def user_login(request):
             else:
                 login(request, user)
                 messages.success(request, "You have successfully logged in.")
-                return redirect("profile")
+                # Redirect to home or dashboard after login
+                return redirect("home")  # Change this to any page you want after login
     else:
         form = CustomUserLoginForm()
-    return render(request, "userApp/login.html", {"form": form})
+
+    return render(request, "login.html", {"form": form})
 
 
+# User Logout View
 @login_required
 def user_logout(request):
     logout(request)
     return redirect("login")
 
 
+# User Dashboard/Profile View
 @login_required
 def user_dashboard(request):
     user = request.user
     if request.method == "POST":
-        form = UserProfileForm(request.POST, instance=user)
+        form = UserProfileForm(request.POST, request.FILES, instance=user)
         if form.is_valid():
             form.save()
             messages.success(request, "Profile updated successfully.")
@@ -71,6 +72,7 @@ def user_dashboard(request):
     return render(request, "userApp/profile.html", {"form": form})
 
 
+# Email Verification View
 def verify_email(request, uidb64, token):
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
@@ -88,6 +90,7 @@ def verify_email(request, uidb64, token):
         return redirect("signup")
 
 
+# Password Reset Request View
 def reset_password(request):
     if request.method == "POST":
         form = PasswordResetForm(request.POST)
@@ -95,16 +98,18 @@ def reset_password(request):
             email = form.cleaned_data["email"]
             try:
                 user = CustomUser.objects.get(email=email)
-                send_password_reset_email(request, user)
+                send_password_reset_email(request, user)  # Send password reset email
                 messages.info(request, "We have sent you an email with password reset instructions.")
                 return redirect("login")
             except CustomUser.DoesNotExist:
                 messages.error(request, "User does not exist.")
     else:
         form = PasswordResetForm()
+
     return render(request, "userApp/forgot.html", {"form": form})
 
 
+# Password Reset Confirmation View
 def reset_password_confirm(request, uidb64, token):
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
@@ -120,6 +125,7 @@ def reset_password_confirm(request, uidb64, token):
         return redirect("login")
 
 
+# Set New Password View
 def set_new_password(request):
     user_id = request.session.get("password_reset_user_id")
     if not user_id:
@@ -142,4 +148,5 @@ def set_new_password(request):
             return redirect("login")
     else:
         form = SetNewPasswordForm()
+
     return render(request, "userApp/new-password.html", {"form": form})

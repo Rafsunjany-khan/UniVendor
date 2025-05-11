@@ -26,7 +26,7 @@
         </ul>
         <ul class="navbar-nav ms-auto"> <!-- Pushes to right -->
           <li class="nav-item">
-            <a class="nav-link" href="{% url 'signup' %}">Login</a>
+            <a class="nav-link" href="{% url 'login' %}">Login</a>
           </li>
         </ul>
       </div>
@@ -60,10 +60,11 @@
   <div class="container mt-5">
     <h2 class="text-center mb-4">Our Products</h2>
     <div class="row row-cols-1 row-cols-md-3 g-4">
+
       <!-- Product 1 -->
       <div class="col">
         <div class="card h-100">
-          <img src="https://via.placeholder.com/200" class="card-img-top" alt="Product Image">
+          <img src="{% static 'image/Products/camera.jpg' %}" class="card-img-top" alt="Product Image">
           <div class="card-body">
             <h5 class="card-title">Product Title 1</h5>
             <p class="card-text">
@@ -82,7 +83,7 @@
       <!-- Product 2 -->
       <div class="col">
         <div class="card h-100">
-          <img src="https://via.placeholder.com/200" class="card-img-top" alt="Product Image">
+          <img src="{% static 'image/Products/dell.jpg' %}" class="card-img-top" alt="Product Image">
           <div class="card-body">
             <h5 class="card-title">Product Title 2</h5>
             <p class="card-text">
@@ -101,7 +102,7 @@
       <!-- Product 3 -->
       <div class="col">
         <div class="card h-100">
-          <img src="https://via.placeholder.com/200" class="card-img-top" alt="Product Image">
+          <img src="{% static 'image/Products/Galaxy_A34.jpg' %}" class="card-img-top" alt="Product Image">
           <div class="card-body">
             <h5 class="card-title">Product Title 3</h5>
             <p class="card-text">

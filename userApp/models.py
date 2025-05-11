@@ -5,7 +5,6 @@ from userApp.managers import CustomUserManager  # Ensure correct import path
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     is_verified = models.BooleanField(default=False)
-
     address_line_1 = models.CharField(null=True, blank=True, max_length=100)
     address_line_2 = models.CharField(null=True, blank=True, max_length=100)
     city = models.CharField(blank=True, max_length=20)
