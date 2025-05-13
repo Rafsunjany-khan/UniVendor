@@ -5,16 +5,15 @@ from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
-from django.urls import reverse
 
 
 def send_verification_email(request, user):
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
-    current_site = get_current_site(request)
 
-    verification_url = reverse("verify-email", kwargs={"uidb64": uid, "token": token})
-    verification_link = f"http://{current_site.domain}{verification_url}"
+    current_site = get_current_site(request)
+    # TODO: use reverse()
+    verification_link = f"http://{current_site.domain}/accounts/verify/{uid}/{token}"
 
     email_subject = "Verify Your Email Address"
     email_body = render_to_string(
@@ -28,6 +27,7 @@ def send_verification_email(request, user):
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[user.email],
     )
+
     email.content_subtype = "html"
     email.send()
 
@@ -35,15 +35,17 @@ def send_verification_email(request, user):
 def send_password_reset_email(request, user):
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
-    current_site = get_current_site(request)
 
-    reset_url = reverse("reset-password-confirm", kwargs={"uidb64": uid, "token": token})
-    reset_link = f"http://{current_site.domain}{reset_url}"
+    current_site = get_current_site(request)
+    # TODO: use reverse()
+    verification_link = (
+        f"http://{current_site.domain}/accounts/reset-password-confirm/{uid}/{token}"
+    )
 
     email_subject = "Reset Your Password"
     email_body = render_to_string(
-        "accounts/password_reset_email.html",  # Make sure you create this template
-        {"user": user, "verification_link": reset_link},
+        "accounts/verification_email.html",
+        {"user": user, "verification_link": verification_link},
     )
 
     email = EmailMessage(
@@ -52,5 +54,6 @@ def send_password_reset_email(request, user):
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[user.email],
     )
+
     email.content_subtype = "html"
     email.send()

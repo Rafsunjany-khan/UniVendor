@@ -3,18 +3,11 @@ from django.contrib.auth.backends import ModelBackend
 
 
 class EmailBackend(ModelBackend):
-    def authenticate(self, request, username=None, password=None, **kwargs):
-        UserModel = get_user_model()
-        email = kwargs.get("email") or username  # Handles both email or username parameter
-
-        if email is None or password is None:
-            return None
-
+    def authenticate(self, request, email=None, password=None, **kwargs):
+        User = get_user_model()
         try:
-            user = UserModel.objects.get(email=email)
-        except UserModel.DoesNotExist:
-            return None
-
-        if user.check_password(password) and self.user_can_authenticate(user):
-            return user
-        return None
+            user = User.objects.get(email=email)
+            if user.check_password(password):
+                return user
+        except User.DoesNotExist:
+            return

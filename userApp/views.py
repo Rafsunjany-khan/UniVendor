@@ -1,78 +1,80 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import redirect, render
 from django.utils.http import urlsafe_base64_decode
-from django.contrib.auth.decorators import login_required
-from .forms import CustomUserRegistrationForm, CustomUserLoginForm, PasswordResetForm, SetNewPasswordForm, UserProfileForm
+
+from .forms import CustomUserRegistrationForm
 from .models import CustomUser
 from .utils import send_password_reset_email, send_verification_email
 
 
-# User Signup View
 def user_signup(request):
     if request.method == "POST":
-        form = CustomUserRegistrationForm(request.POST, request.FILES)
+        form = CustomUserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            send_verification_email(request, user)  # Send verification email
-            messages.info(request, "We have sent you a verification email.")
+            send_verification_email(request, user)
+            messages.info(request, "We have sent you an verfication email")
             return redirect("login")
-        else:
-            messages.error(request, "Please fix the errors below.")
-    else:
-        form = CustomUserRegistrationForm()
-
-    return render(request, "signup.html", {"form": form})
+        # TODO: show form errors in template
+    return render(request, "signup.html")
 
 
-# User Login View
 def user_login(request):
     if request.method == "POST":
-        form = CustomUserLoginForm(request.POST)
-        if form.is_valid():
-            email = form.cleaned_data["email"]
-            password = form.cleaned_data["password"]
-            user = authenticate(request, email=email, password=password)
-            if not user:
-                messages.error(request, "Invalid email or password.")
-            elif not user.is_verified:
-                messages.error(request, "Your email is not verified yet.")
-            else:
-                login(request, user)
-                messages.success(request, "You have successfully logged in.")
-                # Redirect to home or dashboard after login
-                return redirect("home")  # Change this to any page you want after login
-    else:
-        form = CustomUserLoginForm()
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        print(f"Email: {email}, Password: {password}")  # Debugging line
 
-    return render(request, "login.html", {"form": form})
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            user = None
 
+        if user is None:
+            messages.error(request, "Invalid username or password.")
+        elif not user.check_password(password):
+            messages.error(request, "Invalid username or password.")
+        elif not user.is_verified:
+            messages.error(request, "Your email is not verified yet.")
+        else:
+            login(request, user)
+            messages.success(request, "You have successfully logged in.")
+            print(f"User logged in: {user.username}")  # Debugging line
+            return redirect("profile")  # Replace with actual profile page URL
 
-# User Logout View
+    return render(request, "login.html")
+
 @login_required
 def user_logout(request):
     logout(request)
-    return redirect("login")
+    return redirect("signup")
 
 
-# User Dashboard/Profile View
 @login_required
 def user_dashboard(request):
     user = request.user
+
     if request.method == "POST":
-        form = UserProfileForm(request.POST, request.FILES, instance=user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Profile updated successfully.")
-            return redirect("profile")
-    else:
-        form = UserProfileForm(instance=user)
+        # TODO: use a form and show form errors in template
+        # TODO: let user change password
+        user.email = request.POST.get("email", user.email)
+        user.mobile = request.POST.get("mobile", user.mobile)
+        user.address_line_1 = request.POST.get("address_line_1", user.address_line_1)
+        user.address_line_2 = request.POST.get("address_line_2", user.address_line_2)
+        user.city = request.POST.get("city", user.city)
+        user.postcode = request.POST.get("postcode", user.postcode)
+        user.country = request.POST.get("country", user.country)
+        user.save()
 
-    return render(request, "userApp/profile.html", {"form": form})
+        return redirect("profile")
+
+    context = {"user_info": user}
+    return render(request, "profile.html", context)
 
 
-# Email Verification View
 def verify_email(request, uidb64, token):
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
@@ -90,26 +92,24 @@ def verify_email(request, uidb64, token):
         return redirect("signup")
 
 
-# Password Reset Request View
 def reset_password(request):
     if request.method == "POST":
-        form = PasswordResetForm(request.POST)
-        if form.is_valid():
-            email = form.cleaned_data["email"]
-            try:
-                user = CustomUser.objects.get(email=email)
-                send_password_reset_email(request, user)  # Send password reset email
-                messages.info(request, "We have sent you an email with password reset instructions.")
-                return redirect("login")
-            except CustomUser.DoesNotExist:
-                messages.error(request, "User does not exist.")
-    else:
-        form = PasswordResetForm()
+        email = request.POST.get("email")
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            messages.error(request, "User does not exist.")
+            return redirect("password-reset")
 
-    return render(request, "userApp/forgot.html", {"form": form})
+        send_password_reset_email(request, user)
+        messages.info(
+            request, "We have sent you an email with password reset instructions"
+        )
+        return redirect("login")
+
+    return render(request, "forgot.html")
 
 
-# Password Reset Confirmation View
 def reset_password_confirm(request, uidb64, token):
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
@@ -118,35 +118,23 @@ def reset_password_confirm(request, uidb64, token):
         user = None
 
     if user and default_token_generator.check_token(user, token):
-        request.session["password_reset_user_id"] = user.id
+        user.is_verified = True
+        user.save()
+        login(request, user)
         return redirect("new-password")
     else:
-        messages.error(request, "The reset link is invalid or has expired.")
+        messages.error(request, "The verification link is invalid or has expired.")
         return redirect("login")
 
 
-# Set New Password View
+@login_required
 def set_new_password(request):
-    user_id = request.session.get("password_reset_user_id")
-    if not user_id:
-        messages.error(request, "Session expired or invalid access.")
-        return redirect("login")
-
-    try:
-        user = CustomUser.objects.get(pk=user_id)
-    except CustomUser.DoesNotExist:
-        messages.error(request, "Invalid user.")
-        return redirect("login")
-
     if request.method == "POST":
-        form = SetNewPasswordForm(request.POST)
-        if form.is_valid():
-            password = form.cleaned_data["password"]
-            user.set_password(password)
-            user.save()
-            messages.success(request, "Password updated successfully. You can now log in.")
-            return redirect("login")
-    else:
-        form = SetNewPasswordForm()
-
-    return render(request, "userApp/new-password.html", {"form": form})
+        # TODO: use form, and add 'Confirm Password'
+        password = request.POST.get("password")
+        user = request.user
+        user.set_password(password)
+        user.save()
+        messages.success(request, "Password updated successfully.")
+        return redirect("profile")
+    return render(request, "new-password.html")

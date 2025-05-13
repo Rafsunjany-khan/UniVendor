@@ -12,6 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from decimal import Decimal
+
+import environ
+
+env = environ.Env()
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,6 +47,8 @@ INSTALLED_APPS = [
 
     'mainApp',
     'userApp',
+    'carts',
+    'orders',
 ]
 
 MIDDLEWARE = [
@@ -50,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'univendor.urls'
@@ -71,6 +81,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'univendor.wsgi.application'
 
+
+# settings.py
+AUTHENTICATION_BACKENDS = [
+    'userApp.authentication.EmailBackend',  # Path to your custom authentication backend
+    'django.contrib.auth.backends.ModelBackend',  # Keep the default one as fallback
+]
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -126,3 +142,35 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+LOGIN_URL = '/userApp/login/'  # Set the custom login URL here
+
+LOGIN_REDIRECT_URL = '/userApp/profile/'  # Redirect after successful login
+# Media files
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+AUTH_USER_MODEL = "userApp.CustomUser"
+
+# Email Configuration
+
+#EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+#EMAIL_HOST = "smtp.gmail.com"
+#EMAIL_PORT = 587
+#EMAIL_USE_TLS = True
+#EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+#EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+
+# Payment Configuration
+
+#SSLCOMMERZ_IS_SANDBOX: bool = env("SSLCOMMERZ_IS_SANDBOX")
+#SSLCOMMERZ_STORE_ID = env("SSLCOMMERZ_STORE_ID")
+#SSLCOMMERZ_STORE_PASS = env("SSLCOMMERZ_STORE_PASS")
+
+
+#DELIVERY_CHARGE = Decimal(env("DELIVERY_CHARGE"))
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
